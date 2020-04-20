@@ -1,0 +1,44 @@
+---
+title: "Drought detection in the Omineca"
+author: "Hardy Griesbauer"
+date: "20/04/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+# libraries
+library(tidyverse)
+library(bcdata)
+library(mapview)
+library(here)
+
+# Load data
+load(here("data","droughtData.RData"))
+
+```
+
+# Drought damage in the Omineca Region
+I tried to use the `bcdata` package to query and download forest health polygon data, but at the time it wasn't updated with 2019 data.  I downloaded 2019 and 2018 AOS polygons from https://www.for.gov.bc.ca/ftp/HFP/external/!publish/Aerial_Overview/, and filtered for the following factors:
+
+1. NDM = drought mortality;
+2. ND = drought damage;
+3. NE = flagging in cedar (phenomenon observed in Robson Valley); and
+4. NF = foliar damage from drought.
+
+We can then filter for Omineca region and explore on a map:
+
+```{r explore drought ROM}
+
+droughtData %>%
+  filter(REGION %in% c("ROM")) %>% # filter for Omineca (ROM)
+  filter(!SEVERITY %in% c("L")) %>% # filter out low severity 
+  
+    # Map
+  mapview(zcol="FHF")
+
+
+```
+
+
