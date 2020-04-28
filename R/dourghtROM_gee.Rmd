@@ -1,5 +1,7 @@
 ---
-title: "droughtOmineca_gee"
+title: "Drought detection in the Omineca - Google Earth Engine Scripts"
+author: "Alexandre Bevington"
+date: "27/04/2020"
 output: html_document
 ---
 
@@ -9,7 +11,7 @@ knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
 library(lubridate)
 library(tidyverse)
 library(here)
-library(rgee)
+library(rgee) #https://github.com/csaybar/rgee
 library(sf)
 library(bcmaps)
 library(egg)
@@ -32,18 +34,20 @@ rgee::ee_reattach()
   # st_crs(drought) <- 3005
 ```
 
-### Earth Engine Datasets
+#### Earth Engine Datasets
 
-- SMAP: Soil Moisture
-- MODIS: Normalized Difference Vegetation Index 
-- MODIS: Enhanced Vegetation Index
-- MODIS: Evapotranspiration
-- MODIS: Latent heat flux
+- MODIS: Normalized Difference Vegetation Index (NDVI)
+- MODIS: Enhanced Vegetation Index (EVI)
+- MODIS: Evapotranspiration (ET)
+- MODIS: Latent heat flux (LE)
+- SMAP: Soil Moisture (in progress)
+- Sentinel-2: NDVI, EVI, NDMI (in progress)
+- Landsat-4-8: NDVI, EVI, NDMI (in progress)
 
 ```{r gee_load_data, eval = TRUE} 
 rgee::ee_reattach()
 
-SMAP <- ee$ImageCollection("NASA_USDA/HSL/SMAP_soil_moisture")$select("ssm")
+# SMAP <- ee$ImageCollection("NASA_USDA/HSL/SMAP_soil_moisture")$select("ssm")
 MOD_NDVI <- ee$ImageCollection("MODIS/006/MYD13A1")$merge(ee$ImageCollection("MODIS/006/MOD13A1"))$select("NDVI")
 MOD_EVI <- ee$ImageCollection("MODIS/006/MYD13A1")$merge(ee$ImageCollection("MODIS/006/MOD13A1"))$select("EVI")
 MOD_ET = ee$ImageCollection("MODIS/006/MOD16A2")$select("ET")
@@ -52,7 +56,7 @@ MOD_LE = ee$ImageCollection("MODIS/006/MOD16A2")$select("LE")
 
 
 ```{r gee_timeseries, eval = FALSE} 
-SMAP_ext <- ee_extract(x = SMAP, y = drought %>% st_centroid(), fun = ee$Reducer$mean(), sf = TRUE)
+# SMAP_ext <- ee_extract(x = SMAP, y = drought %>% st_centroid(), fun = ee$Reducer$mean(), sf = TRUE)
 MOD_NDVI_ext <- ee_extract(x = MOD_NDVI, y = drought %>% st_centroid(), fun = ee$Reducer$mean(), sf = TRUE)
 MOD_EVI_ext <- ee_extract(x = MOD_EVI, y = drought %>% st_centroid(), fun = ee$Reducer$mean(), sf = TRUE)
 MOD_ET_ext <- ee_extract(x = MOD_ET, y = drought %>% st_centroid(), fun = ee$Reducer$mean(), sf = TRUE)
@@ -86,7 +90,6 @@ MOD_LE_ext_clean <- clean_ext(ext = MOD_LE_ext, group_var = "FHF", var = "LE", m
 save.image(here("data","droughtData.RData"))
 ```
 
-### Day of Year   
 ```{r plot_jd_veg} 
 
 MOD_NDVI_ext_clean_doy <- MOD_NDVI_ext_clean %>% 
@@ -100,22 +103,24 @@ MOD_EVI_ext_clean_doy <- MOD_EVI_ext_clean %>%
   summarise(mean = mean(EVI, na.rm = T)) 
 
 ggplot() +
-  geom_smooth(data = filter(MOD_NDVI_ext_clean_doy, year < 2019), aes(doy, mean, group = factor(year)), se = F, color = "grey") +
-  geom_smooth(data = filter(MOD_NDVI_ext_clean_doy, year == 2018), aes(doy, mean, group = factor(year), color = "2018"), se = F, show.legend = F) +
-  geom_smooth(data = filter(MOD_NDVI_ext_clean_doy, year == 2019), aes(doy, mean, group = factor(year), color = "2019"), se = F, show.legend = F) +
+  geom_line(data = filter(MOD_NDVI_ext_clean_doy, year < 2017), aes(doy, mean, group = factor(year)), se = F, color = "grey") +
+  geom_line(data = filter(MOD_NDVI_ext_clean_doy, year == 2017), aes(doy, mean, group = factor(year), color = "2017"), se = F, show.legend = F) +
+  geom_line(data = filter(MOD_NDVI_ext_clean_doy, year == 2018), aes(doy, mean, group = factor(year), color = "2018"), se = F, show.legend = F) +
+  geom_line(data = filter(MOD_NDVI_ext_clean_doy, year == 2019), aes(doy, mean, group = factor(year), color = "2019"), se = F, show.legend = F) +
   geom_line(data = filter(MOD_NDVI_ext_clean_doy, year == 2020), aes(doy, mean, group = factor(year), color = "2020"), se = F, show.legend = F) +
   facet_wrap(~FHF, ncol = 1, scales = "free_y") +
-  scale_color_manual(values = c("blue","red","black")) +
+  scale_color_manual(values = c("blue","green","red","black")) +
   theme_article() +
   labs(title = "MOD13A2.006 Terra Vegetation Indices 16-Day Global 1km", 
        y = "NDVI") |
 ggplot() +
-  geom_smooth(data = filter(MOD_EVI_ext_clean_doy, year < 2019), aes(doy, mean, group = factor(year)), se = F, color = "grey") +
-  geom_smooth(data = filter(MOD_EVI_ext_clean_doy, year == 2018), aes(doy, mean, group = factor(year), color = "2018"), se = F) +
-  geom_smooth(data = filter(MOD_EVI_ext_clean_doy, year == 2019), aes(doy, mean, group = factor(year), color = "2019"), se = F) +
+  geom_line(data = filter(MOD_EVI_ext_clean_doy, year < 2017), aes(doy, mean, group = factor(year)), se = F, color = "grey") +
+  geom_line(data = filter(MOD_EVI_ext_clean_doy, year == 2017), aes(doy, mean, group = factor(year), color = "2017"), se = F) +
+  geom_line(data = filter(MOD_EVI_ext_clean_doy, year == 2018), aes(doy, mean, group = factor(year), color = "2018"), se = F) +
+  geom_line(data = filter(MOD_EVI_ext_clean_doy, year == 2019), aes(doy, mean, group = factor(year), color = "2019"), se = F) +
   geom_line(data = filter(MOD_EVI_ext_clean_doy, year == 2020), aes(doy, mean, group = factor(year), color = "2020"), se = F, show.legend = F) +
   facet_wrap(~FHF, ncol = 1, scales = "free_y") +
-  scale_color_manual(values = c("blue","red","black")) +
+  scale_color_manual(values = c("blue","green","red","black")) +
   theme_article() +
   labs(title = "",
          y = "EVI")
@@ -134,22 +139,24 @@ MOD_LE_ext_clean_doy <- MOD_LE_ext_clean %>%
   summarise(mean = mean(LE, na.rm = T)) 
 
 ggplot() +
-  geom_smooth(data = filter(MOD_ET_ext_clean_doy, year < 2019), aes(doy, mean, group = factor(year)), se = F, color = "grey") +
-  geom_smooth(data = filter(MOD_ET_ext_clean_doy, year == 2018), aes(doy, mean, group = factor(year), color = "2018"), se = F, show.legend = F) +
-  geom_smooth(data = filter(MOD_ET_ext_clean_doy, year == 2019), aes(doy, mean, group = factor(year), color = "2019"), se = F, show.legend = F) +
+  geom_line(data = filter(MOD_ET_ext_clean_doy, year < 2017), aes(doy, mean, group = factor(year)), se = F, color = "grey") +
+  geom_line(data = filter(MOD_ET_ext_clean_doy, year == 2017), aes(doy, mean, group = factor(year), color = "2017"), se = F, show.legend = F) +
+  geom_line(data = filter(MOD_ET_ext_clean_doy, year == 2018), aes(doy, mean, group = factor(year), color = "2018"), se = F, show.legend = F) +
+  geom_line(data = filter(MOD_ET_ext_clean_doy, year == 2019), aes(doy, mean, group = factor(year), color = "2019"), se = F, show.legend = F) +
   geom_line(data = filter(MOD_ET_ext_clean_doy, year == 2020), aes(doy, mean, group = factor(year), color = "2020"), se = F, show.legend = F) +
   facet_wrap(~FHF, ncol = 1, scales = "free_y") +
-  scale_color_manual(values = c("blue","red","black")) +
+  scale_color_manual(values = c("blue","green","red","black")) +
   theme_article() +
   labs(title = "MOD16A2: MODIS Global Terrestrial Evapotranspiration 8-Day Global 1km",
          y = "Evapotranspiration (kg/m^2)") |
 ggplot() +
-  geom_smooth(data = filter(MOD_LE_ext_clean_doy, year < 2019), aes(doy, mean, group = factor(year)), se = F, color = "grey") +
-  geom_smooth(data = filter(MOD_LE_ext_clean_doy, year == 2018), aes(doy, mean, group = factor(year), color = "2018"), se = F) +
-  geom_smooth(data = filter(MOD_LE_ext_clean_doy, year == 2019), aes(doy, mean, group = factor(year), color = "2019"), se = F) +
+  geom_line(data = filter(MOD_LE_ext_clean_doy, year < 2017), aes(doy, mean, group = factor(year)), se = F, color = "grey") +
+  geom_line(data = filter(MOD_LE_ext_clean_doy, year == 2017), aes(doy, mean, group = factor(year), color = "2017"), se = F) +
+  geom_line(data = filter(MOD_LE_ext_clean_doy, year == 2018), aes(doy, mean, group = factor(year), color = "2018"), se = F) +
+  geom_line(data = filter(MOD_LE_ext_clean_doy, year == 2019), aes(doy, mean, group = factor(year), color = "2019"), se = F) +
   geom_line(data = filter(MOD_LE_ext_clean_doy, year == 2020), aes(doy, mean, group = factor(year), color = "2020"), se = F, show.legend = F) +
   facet_wrap(~FHF, ncol = 1, scales = "free_y") +
-  scale_color_manual(values = c("blue","red","black")) +
+  scale_color_manual(values = c("blue","green","red","black")) +
   theme_article() +
   labs(title = "",
          y = "Latent heat flux (J/m^2/day)")
@@ -227,27 +234,30 @@ ggplot() +
 
 ```
 
-### NDVI Anomaly 2019 vs mean(2001-2018)
+<!-- ### NDVI Anomaly 2019 vs mean(2001-2018) -->
 
-```{r}
-ee_reattach()
+<!-- ```{r} -->
+<!-- ee_reattach() -->
 
-MOD_et_clip_ref <- MOD_NDVI$
-  filter(ee$Filter$calendarRange(6,7,"month"))$
-  filter(ee$Filter$calendarRange(2001,2018,"year"))$
-  mean()
+<!-- MOD_et_clip_ref <- MOD_NDVI$ -->
+<!--   filter(ee$Filter$calendarRange(6,7,"month"))$ -->
+<!--   filter(ee$Filter$calendarRange(2001,2018,"year"))$ -->
+<!--   mean() -->
 
-MOD_et_clip_study <- MOD_NDVI$
-  filter(ee$Filter$calendarRange(6,7,"month"))$
-  filter(ee$Filter$calendarRange(2019,2019,"year"))$
-  mean()
+<!-- MOD_et_clip_study <- MOD_NDVI$ -->
+<!--   filter(ee$Filter$calendarRange(6,7,"month"))$ -->
+<!--   filter(ee$Filter$calendarRange(2019,2019,"year"))$ -->
+<!--   mean() -->
 
-MOD_et_clip_dif <- MOD_et_clip_study$subtract(MOD_et_clip_ref)
+<!-- MOD_et_clip_dif <- MOD_et_clip_study$subtract(MOD_et_clip_ref) -->
 
-Map$centerObject(ee$FeatureCollection('users/bevingtona/BC'))
-Map$addLayer(MOD_et_clip_dif, list(min = -1000, max = 1000, palette = RColorBrewer::brewer.pal(n = 9, name = "RdYlBu")))
+<!-- Map$centerObject(ee$FeatureCollection('users/bevingtona/BC')) -->
+<!-- Map$addLayer(MOD_et_clip_dif, list(min = -1000, max = 1000, palette = RColorBrewer::brewer.pal(n = 9, name = "RdYlBu"))) -->
 
-```
+
+
+
+<!-- ``` -->
 
 
 <!-- #### EXTRACT TIMESERIES MODIS NDVI #### -->
