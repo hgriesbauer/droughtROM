@@ -39,6 +39,10 @@ droughtData %>%
   mapview(zcol="FHF")
 
 
+droughtData %>%
+  filter(REGION %in% c("ROM")) %>% # filter for Omineca (ROM)
+  filter(!SEVERITY %in% c("L")) %>% # filter out low severity 
+  sf::write_sf("data/drought_poly_aos.shp")
 ```
 
 
